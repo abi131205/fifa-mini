@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-stadium-slate-50 text-stadium-slate-800 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom focus outline for keyboard accessibility (WCAG AA requirement) */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid #ea580c; /* Burnt Orange */
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar styling for a premium feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-stadium-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-stadium-slate-300 rounded-full hover:bg-stadium-slate-400 transition-colors;
+}
