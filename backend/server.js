@@ -9,15 +9,15 @@ import { simulationService } from './services/simulationService.js';
 const PORT = process.env.PORT || 5000;
 
 async function bootstrap() {
-  // Connect to MongoDB Atlas (with in-memory fallback)
-  await connectDB();
-
-  // Start the crowd state tick loop (5-second intervals as confirmed)
-  simulationService.start(5000);
-
-  // Start listening for requests
-  const server = app.listen(PORT, () => {
+  // Start listening for requests immediately so Vite proxy connections do not get refused
+  const server = app.listen(PORT, async () => {
     console.log(`🚀 Smart Stadium Crowd Management Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode.`);
+    
+    // Connect to MongoDB Atlas (with in-memory fallback)
+    await connectDB();
+
+    // Start the crowd state tick loop (5-second intervals as confirmed)
+    simulationService.start(5000);
   });
 
   // Graceful shutdown handling
