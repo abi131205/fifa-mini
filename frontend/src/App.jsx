@@ -1,8 +1,8 @@
 /**
- * @fileoverview Main React App coordinating multi-page tab portal navigation, settings, audio alarms, and live console layout.
+ * @fileoverview Main React App coordinating multi-page tab portal navigation, light/dark themes, Operator Roles, audio customizers, and diagnostics.
  */
 import React, { useState, useEffect, Suspense } from 'react';
-import { Shield, Sparkles, RefreshCw, Layers, Home, Activity, MessageSquare, Sliders, Volume2, VolumeX, AlertOctagon, Terminal } from 'lucide-react';
+import { Shield, Sparkles, RefreshCw, Layers, Home, Activity, MessageSquare, Sliders, Volume2, VolumeX, AlertOctagon, Sun, Moon, Users, LogOut } from 'lucide-react';
 import { api } from './services/api.js';
 import SimulationControls from './components/SimulationControls.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -10,50 +10,96 @@ import AlertsPanel from './components/AlertsPanel.jsx';
 import StadiumMap from './components/StadiumMap.jsx';
 import StaffAllocation from './components/StaffAllocation.jsx';
 
-// Lazy-loaded staff assistant chat module
+// Advanced interactive subcomponents
+import SystemHealth from './components/SystemHealth.jsx';
+import PAAnnouncer from './components/PAAnnouncer.jsx';
+import RadioChatter from './components/RadioChatter.jsx';
+
 const ChatAssistant = React.lazy(() => import('./components/ChatAssistant.jsx'));
 
 /**
- * Synthesizes a high-fidelity control room chime sound using Web Audio API.
- * Guarantees zero local asset loading issues.
+ * Synthesizes high-fidelity control room chimes dynamically using Web Audio API nodes.
+ * @param {string} tone Sound profile key ('sonar' | 'beep' | 'siren').
  */
-function playAlarmSound() {
+function playAlarmSound(tone = 'sonar') {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
-    // Primary Tone
-    const osc1 = audioCtx.createOscillator();
-    const gain1 = audioCtx.createGain();
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(660, audioCtx.currentTime); // E5 chirp
-    osc1.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.2); // slide down
-    gain1.gain.setValueAtTime(0.18, audioCtx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-    osc1.connect(gain1);
-    gain1.connect(audioCtx.destination);
-    osc1.start();
-    osc1.stop(audioCtx.currentTime + 0.22);
+    if (tone === 'sonar') {
+      // High-pitched radar ping
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.65);
+    } 
+    else if (tone === 'beep') {
+      // Double sharp digit beep
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'square';
+      osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5
+      gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start();
+      osc1.stop(audioCtx.currentTime + 0.12);
 
-    // Harmonic overlay (creates professional "beep")
-    const osc2 = audioCtx.createOscillator();
-    const gain2 = audioCtx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1320, audioCtx.currentTime); // High pitch ring
-    osc2.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
-    gain2.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-    osc2.connect(gain2);
-    gain2.connect(audioCtx.destination);
-    osc2.start();
-    osc2.stop(audioCtx.currentTime + 0.12);
+      setTimeout(() => {
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(987.77, audioCtx.currentTime);
+        gain2.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start();
+        osc2.stop(audioCtx.currentTime + 0.12);
+      }, 150);
+    } 
+    else if (tone === 'siren') {
+      // Continuous sweeping alarm siren
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      
+      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.4);
+      osc.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.8);
+      osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 1.2);
+      
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + 1.25);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 1.3);
+    }
   } catch (err) {
-    console.error('AudioContext alarm sound failed:', err);
+    console.error('AudioContext sound synthesize failed:', err);
   }
 }
 
 function App() {
-  // Navigation State: 'home' | 'console' | 'chat' | 'settings'
+  // Navigation State
   const [activeTab, setActiveTab] = useState('home');
+
+  // Aesthetic Themes: 'dark' | 'light'
+  const [theme, setTheme] = useState('dark');
+
+  // Operator Authorization Roles: 'director' | 'officer' | 'crew'
+  const [userRole, setUserRole] = useState('director');
+
+  // Emergency Evac lockdown states
+  const [lockdownActive, setLockdownActive] = useState(false);
 
   // Core Simulation States
   const [gates, setGates] = useState([]);
@@ -66,10 +112,11 @@ function App() {
   // Settings Configuration states
   const [warningThreshold, setWarningThreshold] = useState(80);
   const [alarmEnabled, setAlarmEnabled] = useState(false);
+  const [alarmTone, setAlarmTone] = useState('sonar'); // 'sonar' | 'beep' | 'siren'
   const [purgingLogs, setPurgingLogs] = useState(false);
   const [purgedMessage, setPurgedMessage] = useState(false);
 
-  // Keep track of the previous count of critical gates to prevent alarm spamming
+  // Keep track of critical gates to prevent chime spamming
   const [prevCriticalCount, setPrevCriticalCount] = useState(0);
 
   /**
@@ -77,7 +124,9 @@ function App() {
    * Runs on a 5-second polling interval.
    */
   const fetchData = async (showRefresher = false) => {
+    if (lockdownActive) return; // Freeze polling during lockdown mock override
     if (showRefresher) setIsRefreshing(true);
+    
     try {
       const [statusRes, alertsRes] = await Promise.all([
         api.getStatus(),
@@ -95,7 +144,7 @@ function App() {
 
         // Sound chime only if alarms are enabled AND number of critical gates increased
         if (alarmEnabled && criticalCount > prevCriticalCount) {
-          playAlarmSound();
+          playAlarmSound(alarmTone);
         }
         setPrevCriticalCount(criticalCount);
       }
@@ -112,7 +161,7 @@ function App() {
     }
   };
 
-  // Configure 5-second polling interval (Efficiency Parameter)
+  // Configure 5-second polling interval
   useEffect(() => {
     fetchData();
     const interval = setInterval(() => {
@@ -120,12 +169,13 @@ function App() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [alarmEnabled, warningThreshold, prevCriticalCount]);
+  }, [alarmEnabled, warningThreshold, prevCriticalCount, alarmTone, lockdownActive]);
 
   /**
    * Changes the active crowd simulation phase.
    */
   const handlePhaseChange = async (phase) => {
+    if (lockdownActive) return;
     try {
       const res = await api.changePhase(phase);
       if (res.success) {
@@ -135,6 +185,36 @@ function App() {
       }
     } catch (err) {
       console.error('Failed to change phase:', err.message);
+    }
+  };
+
+  /**
+   * Toggles the Emergency Lockdown evacuation state.
+   */
+  const handleLockdownToggle = () => {
+    if (lockdownActive) {
+      setLockdownActive(false);
+      setPrevCriticalCount(0);
+      fetchData(); // pull fresh stats
+    } else {
+      setLockdownActive(true);
+      
+      // Override all gates to critical evac capacity immediately
+      setGates(prev => prev.map(g => ({ ...g, density: 95 })));
+      
+      // Force emergency alarm chime
+      playAlarmSound('siren');
+      
+      // Prepend emergency evacuation redirect alert
+      const newEvacAlert = {
+        _id: 'lockdown_alert',
+        type: 'REROUTING',
+        urgency: 'high',
+        timestamp: new Date().toISOString(),
+        message: '🔴 CRITICAL LOCKDOWN: EVACUATION ORDER ACTIVATED BY OPERATIONS DIRECTOR.',
+        suggestedAction: 'Divert all spectators out of the stadium bowl. Open emergency egress points at Gates 1, 2, 5, and 7.'
+      };
+      setAlerts(prev => [newEvacAlert, ...prev]);
     }
   };
 
@@ -154,29 +234,38 @@ function App() {
   if (loading) {
     return (
       <div 
-        className="min-h-screen bg-stadium-slate-950 flex flex-col items-center justify-center text-white"
+        className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white font-sans"
         aria-busy="true"
         aria-label="Loading Smart Stadium Dashboard"
       >
         <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-stadium-orange-500 mb-4"></div>
-        <p className="text-sm font-semibold tracking-wider text-stadium-slate-400">
+        <p className="text-sm font-semibold tracking-wider text-slate-400">
           BOOTSTRAPPING venue operations portal...
         </p>
       </div>
     );
   }
 
-  // Count gates currently in CRITICAL state (density >= warningThreshold)
+  // Count gates currently in CRITICAL state
   const criticalGatesCount = gates.filter(g => g.density >= warningThreshold).length;
+  const isDark = theme === 'dark';
 
   return (
-    <div className="min-h-screen bg-stadium-slate-950 text-white font-sans selection:bg-stadium-orange-500 selection:text-white pb-12">
+    <div className={`min-h-screen transition-colors duration-300 font-sans pb-12 ${
+      isDark 
+        ? 'bg-slate-950 text-white' 
+        : 'bg-slate-50 text-slate-800'
+    }`}>
       
-      {/* Dynamic Header & Navigation Bar */}
-      <header className="border-b border-stadium-slate-900 bg-stadium-slate-950/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Header & Navigation Bar */}
+      <header className={`border-b sticky top-0 z-40 backdrop-blur-md transition-colors duration-300 ${
+        isDark 
+          ? 'border-stadium-slate-900 bg-slate-950/80' 
+          : 'border-slate-200 bg-white/80 shadow-sm'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col lg:flex-row items-center justify-between gap-4">
           
-          {/* Logo & Operational Status Ticker */}
+          {/* Logo & Operational Status */}
           <div className="flex items-center gap-3">
             <div className="bg-stadium-orange-600 p-2 rounded-lg text-white shadow-lg shadow-stadium-orange-600/20">
               <Shield className="w-5.5 h-5.5" aria-hidden="true" />
@@ -185,17 +274,16 @@ function App() {
               <h1 className="text-base font-extrabold tracking-tight flex items-center gap-1.5">
                 <span>FIFA World Cup 2026</span>
                 <span className="text-[9px] uppercase font-bold tracking-widest bg-stadium-orange-500/20 border border-stadium-orange-500/30 text-stadium-orange-400 px-1.5 py-0.5 rounded">
-                  Venue Portal
+                  Venue Ops
                 </span>
               </h1>
-              {/* Ticker of active warnings */}
-              <div className="text-[10px] text-stadium-slate-400 flex items-center gap-1 mt-0.5 font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span>Active Phase: {currentPhase.replace(/_/g, ' ')}</span>
-                {criticalGatesCount > 0 && (
+              <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5 font-semibold">
+                <span className={`w-1.5 h-1.5 rounded-full ${lockdownActive ? 'bg-stadium-orange-500 animate-ping' : 'bg-emerald-500'}`}></span>
+                <span>{lockdownActive ? '🚨 STADIUM LOCKDOWN ACTIVE' : `Active Phase: ${currentPhase.replace(/_/g, ' ')}`}</span>
+                {criticalGatesCount > 0 && !lockdownActive && (
                   <>
-                    <span className="w-1 h-1 rounded-full bg-stadium-slate-650"></span>
-                    <span className="text-stadium-orange-400 animate-pulse">⚠️ {criticalGatesCount} critical gates detected</span>
+                    <span className="w-1 h-1 rounded-full bg-slate-650"></span>
+                    <span className="text-stadium-orange-450 animate-pulse">⚠️ {criticalGatesCount} critical gates</span>
                   </>
                 )}
               </div>
@@ -203,11 +291,15 @@ function App() {
           </div>
 
           {/* Navigation Tab Links */}
-          <nav className="flex items-center bg-stadium-slate-900/60 p-1 rounded-lg border border-stadium-slate-800 text-xs gap-1">
+          <nav className={`flex items-center p-1 rounded-lg border text-xs gap-1 ${
+            isDark ? 'bg-stadium-slate-900/60 border-stadium-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
             <button
               onClick={() => setActiveTab('home')}
               className={`px-3 py-1.5 rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'home' ? 'bg-stadium-orange-600 text-white shadow' : 'text-stadium-slate-400 hover:text-white'
+                activeTab === 'home' 
+                  ? 'bg-stadium-orange-600 text-white shadow-md' 
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Home className="w-3.5 h-3.5" />
@@ -216,7 +308,9 @@ function App() {
             <button
               onClick={() => setActiveTab('console')}
               className={`px-3 py-1.5 rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'console' ? 'bg-stadium-orange-600 text-white shadow' : 'text-stadium-slate-400 hover:text-white'
+                activeTab === 'console' 
+                  ? 'bg-stadium-orange-600 text-white shadow-md' 
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
@@ -225,7 +319,9 @@ function App() {
             <button
               onClick={() => setActiveTab('chat')}
               className={`px-3 py-1.5 rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'chat' ? 'bg-stadium-orange-600 text-white shadow' : 'text-stadium-slate-400 hover:text-white'
+                activeTab === 'chat' 
+                  ? 'bg-stadium-orange-600 text-white shadow-md' 
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
@@ -234,7 +330,9 @@ function App() {
             <button
               onClick={() => setActiveTab('settings')}
               className={`px-3 py-1.5 rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'settings' ? 'bg-stadium-orange-600 text-white shadow' : 'text-stadium-slate-400 hover:text-white'
+                activeTab === 'settings' 
+                  ? 'bg-stadium-orange-600 text-white shadow-md' 
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Sliders className="w-3.5 h-3.5" />
@@ -242,27 +340,68 @@ function App() {
             </button>
           </nav>
 
-          {/* Right Status Badge */}
-          <div className="flex items-center gap-3">
+          {/* Quick Header Action items */}
+          <div className="flex items-center gap-2">
+            
+            {/* Operator Role Indicator in Header */}
+            <div className={`hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] font-bold ${
+              isDark ? 'bg-stadium-slate-900 border-stadium-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}>
+              <Users className="w-3.5 h-3.5 text-stadium-orange-500" />
+              <span className="text-slate-400">Role:</span>
+              <span className="uppercase text-stadium-orange-400">{userRole}</span>
+            </div>
+
+            {/* Glowing Emergency Panic Lockdown Button */}
             <button
-              onClick={() => fetchData(true)}
-              disabled={isRefreshing}
-              aria-label="Refresh live data"
-              className="p-2 bg-stadium-slate-900 border border-stadium-slate-800 rounded-lg hover:bg-stadium-slate-800 hover:border-stadium-slate-700 text-stadium-slate-350 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-[10px] font-bold transition-all"
+              onClick={handleLockdownToggle}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-all ${
+                lockdownActive
+                  ? 'bg-emerald-600 border-emerald-500 text-white animate-pulse'
+                  : 'bg-stadium-orange-600/10 hover:bg-stadium-orange-600 border-stadium-orange-500/30 text-stadium-orange-450 hover:text-white shadow-stadium-orange-950/20'
+              }`}
+              title={lockdownActive ? 'End Lockdown Evac' : 'Trigger Stadium Evacuation'}
             >
-              <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
-              <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
+              <AlertOctagon className="w-3.5 h-3.5" />
+              <span>{lockdownActive ? 'Cancel Evac' : 'Lockdown'}</span>
+            </button>
+
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-center ${
+                isDark 
+                  ? 'bg-stadium-slate-900 border-stadium-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 border-slate-250 text-slate-650 hover:text-slate-900 shadow-sm'
+              }`}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             </button>
             
-            {/* Tone Toggle indicator */}
+            <button
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-center ${
+                isDark 
+                  ? 'bg-stadium-slate-900 border-stadium-slate-800 text-slate-400 hover:text-white' 
+                  : 'bg-slate-100 border-slate-250 text-slate-650 hover:text-slate-900 shadow-sm'
+              }`}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Warning Alarm Toggle */}
             <button
               onClick={() => setAlarmEnabled(!alarmEnabled)}
               className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-center ${
                 alarmEnabled 
                   ? 'bg-stadium-orange-500/10 border-stadium-orange-500/20 text-stadium-orange-400' 
-                  : 'bg-stadium-slate-900 border-stadium-slate-800 text-stadium-slate-500'
+                  : isDark 
+                  ? 'bg-stadium-slate-900 border-stadium-slate-800 text-slate-500'
+                  : 'bg-slate-100 border-slate-250 text-slate-400'
               }`}
-              title={alarmEnabled ? 'Mute warnings' : 'Enable sound warnings'}
+              title={alarmEnabled ? 'Mute alarm warnings' : 'Enable audio warning chimes'}
             >
               {alarmEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
             </button>
@@ -271,7 +410,7 @@ function App() {
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         
         {pollingError && (
@@ -288,29 +427,37 @@ function App() {
         {activeTab === 'home' && (
           <div className="space-y-8 animate-fade-in">
             {/* Hero Hub Banner */}
-            <section className="bg-gradient-to-br from-stadium-slate-900 to-stadium-slate-950 border border-stadium-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+            <section className={`border rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden transition-all duration-300 ${
+              isDark 
+                ? 'bg-gradient-to-br from-stadium-slate-900 to-stadium-slate-950 border-stadium-slate-800' 
+                : 'bg-gradient-to-br from-white to-slate-50 border-slate-200'
+            }`}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-stadium-orange-500/5 rounded-full blur-3xl"></div>
               <div className="space-y-4 max-w-xl">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest bg-stadium-orange-500/10 text-stadium-orange-400 px-2.5 py-1 rounded-full border border-stadium-orange-500/25">
                   OPERATIONAL COMMAND HUB
                 </span>
-                <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
+                <h2 className={`text-3xl font-extrabold tracking-tight sm:text-4xl ${isDark ? 'text-white' : 'text-slate-850'}`}>
                   FIFA World Cup 2026 <br />
                   <span className="text-stadium-orange-400">Crowd Analytics System</span>
                 </h2>
-                <p className="text-sm leading-relaxed text-stadium-slate-400">
+                <p className="text-sm leading-relaxed text-slate-400">
                   Welcome to the stadium gate operations center. This system manages venue congestion, calculates capacity safety limits via GenAI, and transmits live volunteer dispatch instructions.
                 </p>
                 <div className="pt-2 flex flex-wrap gap-3">
                   <button
                     onClick={() => setActiveTab('console')}
-                    className="px-5 py-2.5 bg-stadium-orange-600 hover:bg-stadium-orange-500 text-xs font-bold rounded-lg shadow-lg shadow-stadium-orange-600/10 cursor-pointer transition-all"
+                    className="px-5 py-2.5 bg-stadium-orange-600 hover:bg-stadium-orange-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-stadium-orange-600/10 cursor-pointer transition-all"
                   >
                     Open Live Console
                   </button>
                   <button
                     onClick={() => setActiveTab('chat')}
-                    className="px-5 py-2.5 bg-stadium-slate-850 hover:bg-stadium-slate-800 border border-stadium-slate-800 text-xs font-bold rounded-lg cursor-pointer transition-all"
+                    className={`px-5 py-2.5 border text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                      isDark 
+                        ? 'bg-stadium-slate-850 hover:bg-stadium-slate-800 border-stadium-slate-800 text-white' 
+                        : 'bg-white hover:bg-slate-50 border-slate-250 text-slate-700 shadow-sm'
+                    }`}
                   >
                     Launch AI Assistant
                   </button>
@@ -318,7 +465,9 @@ function App() {
               </div>
 
               {/* Graphic Icon */}
-              <div className="relative w-40 h-40 bg-stadium-slate-850/60 rounded-full border border-stadium-slate-800 flex items-center justify-center shadow-inner flex-shrink-0">
+              <div className={`relative w-40 h-40 rounded-full border flex items-center justify-center shadow-inner flex-shrink-0 ${
+                isDark ? 'bg-stadium-slate-850/60 border-stadium-slate-800' : 'bg-slate-100 border-slate-200'
+              }`}>
                 <div className="absolute inset-2 border border-stadium-orange-500/20 rounded-full border-dashed animate-spin-slow"></div>
                 <Activity className="w-16 h-16 text-stadium-orange-500 animate-pulse" />
               </div>
@@ -326,63 +475,72 @@ function App() {
 
             {/* Quick KPI Stats Dashboard Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-stadium-slate-900 border border-stadium-slate-800 rounded-xl">
-                <span className="text-[10px] text-stadium-slate-450 uppercase font-bold tracking-wider block">Active Gates</span>
+              <div className={`p-4 border rounded-xl ${isDark ? 'bg-stadium-slate-900 border-stadium-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <span className="text-[10px] text-slate-455 uppercase font-bold tracking-wider block">Active Gates</span>
                 <span className="text-2xl font-extrabold block mt-1">8 / 8 Entrance</span>
               </div>
-              <div className="p-4 bg-stadium-slate-900 border border-stadium-slate-800 rounded-xl">
-                <span className="text-[10px] text-stadium-slate-450 uppercase font-bold tracking-wider block">Threat Level</span>
-                <span className={`text-2xl font-extrabold block mt-1 ${criticalGatesCount > 0 ? 'text-stadium-orange-400' : 'text-emerald-400'}`}>
-                  {criticalGatesCount > 0 ? `${criticalGatesCount} Warn` : 'Safe'}
+              <div className={`p-4 border rounded-xl ${isDark ? 'bg-stadium-slate-900 border-stadium-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <span className="text-[10px] text-slate-455 uppercase font-bold tracking-wider block">Threat Level</span>
+                <span className={`text-2xl font-extrabold block mt-1 ${criticalGatesCount > 0 ? 'text-stadium-orange-400 animate-pulse' : 'text-emerald-500'}`}>
+                  {criticalGatesCount > 0 ? `${criticalGatesCount} Critical` : 'Safe'}
                 </span>
               </div>
-              <div className="p-4 bg-stadium-slate-900 border border-stadium-slate-800 rounded-xl">
-                <span className="text-[10px] text-stadium-slate-450 uppercase font-bold tracking-wider block">Volunteers Dispatched</span>
+              <div className={`p-4 border rounded-xl ${isDark ? 'bg-stadium-slate-900 border-stadium-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <span className="text-[10px] text-slate-455 uppercase font-bold tracking-wider block">Volunteers Dispatched</span>
                 <span className="text-2xl font-extrabold block mt-1">120 Staff</span>
               </div>
-              <div className="p-4 bg-stadium-slate-900 border border-stadium-slate-800 rounded-xl">
-                <span className="text-[10px] text-stadium-slate-450 uppercase font-bold tracking-wider block">AI Response rate</span>
-                <span className="text-2xl font-extrabold text-blue-400 block mt-1">Grounded</span>
+              <div className={`p-4 border rounded-xl ${isDark ? 'bg-stadium-slate-900 border-stadium-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                <span className="text-[10px] text-slate-455 uppercase font-bold tracking-wider block">Aesthetic Layout</span>
+                <span className="text-2xl font-extrabold text-blue-500 block mt-1 uppercase">{theme} theme</span>
               </div>
             </div>
+
+            {/* Diagnostic Console Panel (Feature 3) */}
+            <SystemHealth theme={theme} />
 
             {/* Card Launch Grid Links */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div 
                 onClick={() => setActiveTab('console')}
-                className="p-5 bg-stadium-slate-900 hover:bg-stadium-slate-850 border border-stadium-slate-800 rounded-xl cursor-pointer hover:-translate-y-1 transition-all group"
+                className={`p-5 border rounded-xl cursor-pointer hover:-translate-y-1 transition-all group ${
+                  isDark ? 'bg-stadium-slate-900 border-stadium-slate-800 hover:bg-stadium-slate-850' : 'bg-white border-slate-200 hover:border-slate-350 shadow-sm'
+                }`}
               >
                 <div className="p-3 bg-stadium-orange-600/10 rounded-lg text-stadium-orange-500 w-fit group-hover:bg-stadium-orange-600/20 transition-colors">
                   <Activity className="w-6 h-6" />
                 </div>
                 <h3 className="font-bold text-md mt-4 mb-2">Venue Control Room</h3>
-                <p className="text-xs text-stadium-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   Analyze real-time entrance crowd densities on an interactive stadium heat map and dispatch security rerouting suggestions.
                 </p>
               </div>
 
               <div 
                 onClick={() => setActiveTab('chat')}
-                className="p-5 bg-stadium-slate-900 hover:bg-stadium-slate-850 border border-stadium-slate-800 rounded-xl cursor-pointer hover:-translate-y-1 transition-all group"
+                className={`p-5 border rounded-xl cursor-pointer hover:-translate-y-1 transition-all group ${
+                  isDark ? 'bg-stadium-slate-900 border-stadium-slate-800 hover:bg-stadium-slate-850' : 'bg-white border-slate-200 hover:border-slate-350 shadow-sm'
+                }`}
               >
-                <div className="p-3 bg-blue-600/10 rounded-lg text-blue-450 w-fit group-hover:bg-blue-600/20 transition-colors">
+                <div className="p-3 bg-blue-600/10 rounded-lg text-blue-500 w-fit group-hover:bg-blue-600/20 transition-colors">
                   <MessageSquare className="w-6 h-6" />
                 </div>
                 <h3 className="font-bold text-md mt-4 mb-2">AI Copilot Terminal</h3>
-                <p className="text-xs text-stadium-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   Interact in natural language with "FIFA Crowd Assist," answering ground crew status queries grounded in live gate telemetry.
                 </p>
               </div>
 
               <div 
                 onClick={() => setActiveTab('settings')}
-                className="p-5 bg-stadium-slate-900 hover:bg-stadium-slate-850 border border-stadium-slate-800 rounded-xl cursor-pointer hover:-translate-y-1 transition-all group"
+                className={`p-5 border rounded-xl cursor-pointer hover:-translate-y-1 transition-all group ${
+                  isDark ? 'bg-stadium-slate-900 border-stadium-slate-800 hover:bg-stadium-slate-850' : 'bg-white border-slate-200 hover:border-slate-350 shadow-sm'
+                }`}
               >
-                <div className="p-3 bg-stadium-slate-800 rounded-lg text-stadium-slate-300 w-fit group-hover:bg-stadium-slate-750 transition-colors">
+                <div className="p-3 bg-slate-700/10 rounded-lg text-slate-400 w-fit group-hover:bg-slate-700/20 transition-colors">
                   <Sliders className="w-6 h-6" />
                 </div>
                 <h3 className="font-bold text-md mt-4 mb-2">Gate Configuration</h3>
-                <p className="text-xs text-stadium-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   Customize predictive warning parameters, set safety threshold sliders, and toggle sound warn chimes.
                 </p>
               </div>
@@ -394,30 +552,38 @@ function App() {
         {activeTab === 'console' && (
           <div className="space-y-6 animate-fade-in">
             
-            {/* Simulation Phase Controls */}
+            {/* Simulation Phase Controls (Scenarios and presets) */}
             <SimulationControls 
               currentPhase={currentPhase} 
               onPhaseChange={handlePhaseChange} 
+              theme={theme}
+              userRole={userRole}
             />
 
-            {/* Split layout: Visualizer Layout Map & Sliders Left, Heatmap & Alerts Right */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* 3-column layout: Visual Map and Sliders Left, Heatmap Center, Diagnostics/PA Right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               {/* Left Column: Visual map and allocation */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-4 space-y-6">
                 <StadiumMap 
                   gates={gates} 
                   selectedGateId={null} 
-                  onGateSelect={() => {}} // Dynamic selection handles inside Dashboard
+                  onGateSelect={() => {}} 
                 />
                 
                 <StaffAllocation gates={gates} />
               </div>
 
-              {/* Right Column: Dashboard grid and Alerts panel */}
-              <div className="lg:col-span-3 space-y-6">
-                <Dashboard gates={gates} />
+              {/* Center Column: Heatmap and Alerts Panel */}
+              <div className="lg:col-span-5 space-y-6">
+                <Dashboard gates={gates} theme={theme} />
                 <AlertsPanel alerts={alerts} alarmEnabled={alarmEnabled} />
+              </div>
+
+              {/* Right Column: PA Announcer & Radio Chatter */}
+              <div className="lg:col-span-3 space-y-6">
+                <PAAnnouncer theme={theme} userRole={userRole} />
+                <RadioChatter theme={theme} />
               </div>
 
             </div>
@@ -427,19 +593,21 @@ function App() {
         {/* Tab View 3: AI Copilot Chat */}
         {activeTab === 'chat' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="bg-gradient-to-br from-stadium-slate-900 to-stadium-slate-950 border border-stadium-slate-800 rounded-xl p-5 shadow-xl">
+            <div className={`border rounded-xl p-5 shadow-xl transition-all duration-300 ${
+              isDark ? 'bg-gradient-to-br from-stadium-slate-900 to-stadium-slate-950 border-stadium-slate-800' : 'bg-white border-slate-200'
+            }`}>
               <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
                 <Sparkles className="text-stadium-orange-500 w-5 h-5 animate-pulse" />
                 <span>On-Ground AI Copilot Terminal</span>
               </h3>
-              <p className="text-xs text-stadium-slate-400 mb-4 border-b border-stadium-slate-800 pb-3">
+              <p className="text-xs text-slate-400 mb-4 border-b border-slate-700/30 pb-3">
                 Ask questions regarding specific gate statuses, predictions, or safety redirects (e.g. "What is the status of Gate 3?").
               </p>
 
               <Suspense 
-                fallback={
+                fallback = {
                   <div 
-                    className="bg-stadium-slate-900 border border-stadium-slate-800 rounded-xl p-8 flex flex-col items-center justify-center text-stadium-slate-400"
+                    className="border rounded-xl p-8 flex flex-col items-center justify-center text-slate-400"
                     aria-busy="true"
                   >
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-stadium-orange-500 mb-2"></div>
@@ -456,21 +624,55 @@ function App() {
         {/* Tab View 4: System Settings */}
         {activeTab === 'settings' && (
           <div className="space-y-6 max-w-2xl mx-auto animate-fade-in">
-            <section className="bg-stadium-slate-900 border border-stadium-slate-800 rounded-xl p-6 shadow-xl text-white space-y-6">
+            <section className={`border rounded-xl p-6 shadow-xl transition-all duration-300 space-y-6 ${
+              isDark ? 'bg-stadium-slate-900 border-stadium-slate-800 text-white' : 'bg-white border-slate-200 text-slate-850 shadow-sm'
+            }`}>
               
-              <div className="border-b border-stadium-slate-800 pb-3">
+              <div className="border-b border-slate-700/30 pb-3">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Sliders className="text-stadium-orange-400 w-5 h-5" />
                   <span>Command System Settings</span>
                 </h3>
-                <p className="text-xs text-stadium-slate-450 mt-1">Configure warning thresholds, alarms, and simulated database utilities.</p>
+                <p className="text-xs text-slate-400 mt-1">Configure warning thresholds, role levels, and simulated database utilities.</p>
+              </div>
+
+              {/* Operator Switcher Selector (Feature 2) */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-sm font-bold">
+                  <span>Operator Access Role Settings</span>
+                  <span className="text-[10px] uppercase font-bold text-stadium-orange-400 bg-stadium-orange-500/10 px-2 py-0.5 rounded">
+                    Active: {userRole}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {['director', 'officer', 'crew'].map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setUserRole(role)}
+                      className={`py-2 text-xs font-bold rounded-lg border capitalize cursor-pointer transition-all ${
+                        userRole === role
+                          ? 'bg-stadium-orange-600 border-stadium-orange-500 text-white shadow'
+                          : isDark
+                          ? 'bg-slate-950 border-stadium-slate-850 text-slate-400 hover:text-white'
+                          : 'bg-slate-100 border-slate-200 text-slate-650 hover:bg-slate-200'
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-450 leading-normal">
+                  - **director**: Full clearance (PA System announcements, simulator presets, volunteer adjustments).<br />
+                  - **officer**: Operation maps, sparks and warnings feeds (Read-Only controls).<br />
+                  - **crew**: View-only logs interface.
+                </p>
               </div>
 
               {/* Threshold Slider */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-bold text-stadium-slate-200">AI Warning Threshold boundary</span>
-                  <span className="font-mono text-stadium-orange-400 font-bold bg-stadium-slate-800 border border-stadium-slate-700 px-2 py-0.5 rounded text-xs">
+                  <span className="font-bold">AI Warning Threshold boundary</span>
+                  <span className="font-mono text-stadium-orange-400 font-bold bg-slate-950/20 border border-slate-700/25 px-2 py-0.5 rounded text-xs">
                     {warningThreshold}%
                   </span>
                 </div>
@@ -481,26 +683,54 @@ function App() {
                   value={warningThreshold}
                   onChange={(e) => {
                     setWarningThreshold(parseInt(e.target.value, 10));
-                    setPrevCriticalCount(0); // reset trigger memory on threshold edit
+                    setPrevCriticalCount(0);
                   }}
-                  className="w-full accent-stadium-orange-500 bg-stadium-slate-750 h-2 rounded-lg cursor-pointer"
+                  className="w-full accent-stadium-orange-500 bg-slate-700 h-2 rounded-lg cursor-pointer"
                   aria-label="Warning threshold slider"
                 />
-                <p className="text-[10px] text-stadium-slate-450">
+                <p className="text-[10px] text-slate-400">
                   Defines the density boundary at which gates cross into warning levels and trigger automated Gemini API congestion alerts.
                 </p>
               </div>
 
+              {/* Tone Profile Customizer (Feature 6) */}
+              <div className="space-y-2">
+                <span className="text-sm font-bold block">Synthesizer Warning Tone Profile</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'sonar', label: 'Radar Sonar Ping' },
+                    { id: 'beep', label: 'Digital Double Beep' },
+                    { id: 'siren', label: 'Critical Evac Siren' }
+                  ].map((tone) => (
+                    <button
+                      key={tone.id}
+                      onClick={() => setAlarmTone(tone.id)}
+                      className={`py-1.5 text-[10px] font-extrabold rounded-lg border cursor-pointer transition-all ${
+                        alarmTone === tone.id
+                          ? 'bg-stadium-orange-600 border-stadium-orange-500 text-white'
+                          : isDark
+                          ? 'bg-slate-950 border-stadium-slate-850 text-slate-400 hover:text-white'
+                          : 'bg-slate-100 border-slate-200 text-slate-650 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tone.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Toggle Warning Chimes */}
-              <div className="flex items-center justify-between p-4 bg-stadium-slate-850 rounded-lg border border-stadium-slate-800">
+              <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                isDark ? 'bg-slate-950/20 border-slate-700/20' : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="space-y-1">
-                  <span className="text-sm font-bold block text-stadium-slate-200">Sound Alert Chimes</span>
-                  <span className="text-[10px] text-stadium-slate-450 block">Synthesize critical audio tones when gates cross the warning threshold.</span>
+                  <span className="text-sm font-bold block">Sound Alert Chimes</span>
+                  <span className="text-[10px] text-slate-450 block">Synthesize critical audio tones when gates cross the warning threshold.</span>
                 </div>
                 <button
                   onClick={() => setAlarmEnabled(!alarmEnabled)}
                   className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${
-                    alarmEnabled ? 'bg-stadium-orange-600' : 'bg-stadium-slate-700'
+                    alarmEnabled ? 'bg-stadium-orange-600' : 'bg-slate-700'
                   }`}
                   aria-label="Toggle Warning Chimes"
                 >
@@ -511,24 +741,32 @@ function App() {
               </div>
 
               {/* Test Audio Chime Button */}
-              <div className="flex items-center justify-between p-4 bg-stadium-slate-850 rounded-lg border border-stadium-slate-800">
+              <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                isDark ? 'bg-slate-950/20 border-slate-700/20' : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="space-y-1">
-                  <span className="text-sm font-bold block text-stadium-slate-200">Chime Audio Diagnostics</span>
-                  <span className="text-[10px] text-stadium-slate-450 block">Trigger a diagnostic play of the synthesized warning chime.</span>
+                  <span className="text-sm font-bold block">Chime Audio Diagnostics</span>
+                  <span className="text-[10px] text-slate-450 block">Trigger a diagnostic play of the selected synthesized warning chime.</span>
                 </div>
                 <button
-                  onClick={playAlarmSound}
-                  className="px-3.5 py-1.5 bg-stadium-slate-800 hover:bg-stadium-slate-700 text-stadium-slate-200 rounded border border-stadium-slate-700 text-xs font-bold cursor-pointer transition-colors"
+                  onClick={() => playAlarmSound(alarmTone)}
+                  className={`px-3.5 py-1.5 rounded border text-xs font-bold cursor-pointer transition-colors ${
+                    isDark 
+                      ? 'bg-slate-950 hover:bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white hover:bg-slate-100 border-slate-250 text-slate-700 shadow-sm'
+                  }`}
                 >
                   Test Chime Tone
                 </button>
               </div>
 
               {/* Purge / Reset DB Logs Utility */}
-              <div className="flex items-center justify-between p-4 bg-stadium-slate-850 rounded-lg border border-stadium-slate-800">
+              <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                isDark ? 'bg-slate-950/20 border-slate-700/20' : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="space-y-1">
-                  <span className="text-sm font-bold block text-stadium-slate-200">Purge Telemetry Logs</span>
-                  <span className="text-[10px] text-stadium-slate-450 block">Purge local database files and simulated crowd logs to start fresh.</span>
+                  <span className="text-sm font-bold block">Purge Telemetry Logs</span>
+                  <span className="text-[10px] text-slate-450 block">Purge local database files and simulated crowd logs to start fresh.</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {purgedMessage && (
@@ -546,20 +784,6 @@ function App() {
                 </div>
               </div>
 
-              {/* System Info Code blocks */}
-              <div className="p-4 bg-slate-950 rounded-lg border border-slate-900 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-stadium-orange-400 font-mono font-bold">
-                  <Terminal className="w-4 h-4" />
-                  <span>Operations Console Diagnostics</span>
-                </div>
-                <div className="text-[10px] font-mono text-stadium-slate-400 leading-relaxed space-y-1">
-                  <p>&gt; System Status: ACTIVE</p>
-                  <p>&gt; Polling Interval: 5 SECONDS (DEBOUNCED)</p>
-                  <p>&gt; Gemini Model: GEMINI-2.5-FLASH</p>
-                  <p>&gt; Mock Database Mode: ACTIVE</p>
-                </div>
-              </div>
-
             </section>
           </div>
         )}
@@ -567,11 +791,11 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 border-t border-stadium-slate-900 pt-6 text-center text-xs text-stadium-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 border-t border-slate-700/25 pt-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
         <p>© FIFA World Cup 2026 Venue Security Team. All simulation logs grounded in Gemini AI.</p>
         <div className="flex items-center gap-1.5">
           <Layers className="w-3.5 h-3.5 text-stadium-orange-500" />
-          <span>Hackathon Submission Engine v2.0.0</span>
+          <span>Hackathon Submission Engine v3.0.0</span>
         </div>
       </footer>
     </div>
