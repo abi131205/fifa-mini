@@ -57,6 +57,20 @@ class SimulationService {
     }));
     this.timer = null;
     this.lastAlertTime = {}; // gateId -> timestamp (prevents alert spamming)
+    // Staff allocation state (defaults to 15 volunteers per gate, total 120)
+    this.staffAllocation = Object.keys(GATE_NAMES).reduce((acc, id) => {
+      acc[id] = 15;
+      return acc;
+    }, {});
+  }
+
+  /**
+   * Updates the volunteer staff count allocation across gates.
+   * @param {Object} allocation Key-value mapping of gate ID to staff count.
+   */
+  setStaffAllocation(allocation) {
+    this.staffAllocation = { ...this.staffAllocation, ...allocation };
+    console.log('[Simulation] Staff allocation updated:', this.staffAllocation);
   }
 
   /**
@@ -109,9 +123,22 @@ class SimulationService {
 
     this.gates = this.gates.map(gate => {
       const target = targets[gate.id];
-      // Generate a small fluctuate step towards target with slight random jitter
       const diff = target - gate.density;
-      const step = diff * 0.2; // Move 20% closer to target value
+      const staff = this.staffAllocation[gate.id] || 15;
+      
+      // Base step is 20% of difference
+      let step = diff * 0.2;
+      
+      if (diff > 0) {
+        // More staff slows down the crowd accumulation (rate is damped)
+        const staffFactor = 15 / Math.max(1, staff);
+        step = step * staffFactor;
+      } else if (diff < 0) {
+        // More staff speeds up crowd clearance
+        const staffFactor = staff / 15;
+        step = step * staffFactor;
+      }
+      
       const jitter = (Math.random() - 0.5) * 6; // Random jitter between -3% and +3%
       
       let newDensity = Math.round(gate.density + step + jitter);

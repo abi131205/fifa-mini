@@ -78,3 +78,32 @@ export function changePhase(req, res) {
     res.status(400).json({ success: false, message: error.message });
   }
 }
+
+/**
+ * Updates volunteer staff allocations for Gates.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+export function allocateStaff(req, res) {
+  try {
+    const { allocation } = req.body;
+    if (!allocation || typeof allocation !== 'object') {
+      return res.status(400).json({ success: false, message: 'Invalid staff allocation details.' });
+    }
+
+    // Validate that total doesn't exceed volunteer pool
+    const totalStaff = Object.values(allocation).reduce((sum, val) => sum + (parseInt(val, 10) || 0), 0);
+    if (totalStaff > 120) {
+      return res.status(400).json({ success: false, message: 'Total allocated staff cannot exceed volunteer pool (120).' });
+    }
+
+    simulationService.setStaffAllocation(allocation);
+    res.json({
+      success: true,
+      message: 'Staff allocation updated successfully.',
+      allocation: simulationService.staffAllocation
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+}

@@ -95,5 +95,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message })
     });
+  },
+
+  /**
+   * Sends volunteer staff allocation map.
+   * @param {Object} allocation Key-value mapping of gate ID to staff count.
+   * @returns {Promise<{success: boolean, message: string, allocation: Object}>}
+   */
+  async allocateStaff(allocation) {
+    return request('/crowd/staff', {
+      method: 'POST',
+      body: JSON.stringify({ allocation })
+    });
   }
 };

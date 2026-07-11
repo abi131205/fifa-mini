@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Activity, Flame, ChevronRight, BarChart2 } from 'lucide-react';
 import { api } from '../services/api.js';
+import TrendChart from './TrendChart.jsx';
 
 /**
  * Helper to determine accessibility CSS classes based on crowd density percentages.
@@ -183,33 +184,38 @@ export default function Dashboard({ gates }) {
                 </span>
               </div>
 
-              <h4 className="text-sm font-bold text-stadium-slate-300 mb-2">Recent Readings History:</h4>
-              
-              {loadingHistory ? (
-                <div className="flex justify-center items-center py-10" aria-busy="true">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-stadium-orange-500"></div>
+              <div className="space-y-4">
+                <TrendChart history={history} gateName={selectedGate.name} />
+
+                <div>
+                  <h4 className="text-xs font-bold text-stadium-slate-350 mb-2">Recent Logs Feed:</h4>
+                  {loadingHistory ? (
+                    <div className="flex justify-center items-center py-6" aria-busy="true">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-stadium-orange-500"></div>
+                    </div>
+                  ) : history.length === 0 ? (
+                    <p className="text-[10px] text-stadium-slate-500 text-center py-4">No historical records logged yet.</p>
+                  ) : (
+                    <ul className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1" aria-label={`Density logs history for ${selectedGate.name}`}>
+                      {history.slice(0, 5).map((log, idx) => {
+                        const time = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        return (
+                          <li 
+                            key={log._id || idx}
+                            className="flex items-center justify-between text-[10px] p-1.5 rounded bg-stadium-slate-800 border border-stadium-slate-750 hover:bg-stadium-slate-700 transition-colors"
+                          >
+                            <div className="flex items-center gap-1">
+                              <ChevronRight className="w-3 h-3 text-stadium-orange-500" />
+                              <span className="font-mono text-stadium-slate-400">{time}</span>
+                            </div>
+                            <span className="font-bold text-stadium-slate-200">{log.density}% capacity</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
-              ) : history.length === 0 ? (
-                <p className="text-xs text-stadium-slate-400 text-center py-6">No historical records logged yet.</p>
-              ) : (
-                <ul className="space-y-2 max-h-[250px] overflow-y-auto pr-1" aria-label={`Density logs history for ${selectedGate.name}`}>
-                  {history.map((log, idx) => {
-                    const time = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    return (
-                      <li 
-                        key={log._id || idx}
-                        className="flex items-center justify-between text-xs p-2 rounded bg-stadium-slate-800 border border-stadium-slate-750 hover:bg-stadium-slate-700 transition-colors"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <ChevronRight className="w-3.5 h-3.5 text-stadium-orange-500" />
-                          <span className="font-mono text-stadium-slate-300">{time}</span>
-                        </div>
-                        <span className="font-bold">{log.density}% capacity</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              </div>
             </div>
           )}
         </div>

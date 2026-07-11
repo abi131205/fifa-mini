@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
-import { getCurrentStatus, getHistory, changePhase } from '../controllers/crowdController.js';
+import { getCurrentStatus, getHistory, changePhase, allocateStaff } from '../controllers/crowdController.js';
 import { getAlerts } from '../controllers/predictionController.js';
 import { handleChat } from '../controllers/chatController.js';
 import { PHASES } from '../services/simulationService.js';
@@ -73,6 +73,19 @@ router.post(
   ],
   handleValidationErrors,
   changePhase
+);
+
+// Update volunteer staff allocation
+router.post(
+  '/crowd/staff',
+  apiLimiter,
+  [
+    body('allocation')
+      .isObject()
+      .withMessage('Allocation must be an object mapping gate IDs to staff count')
+  ],
+  handleValidationErrors,
+  allocateStaff
 );
 
 // Get active alerts (predictions + rerouting)
