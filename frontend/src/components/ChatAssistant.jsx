@@ -147,6 +147,11 @@ export default function ChatAssistant() {
             </div>
           </div>
         )}
+        {error && (
+          <div className="p-3 mx-2 bg-red-950/40 border border-red-900 rounded-lg text-xs text-red-200 animate-shake">
+            {error}
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

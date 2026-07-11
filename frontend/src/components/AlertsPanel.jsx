@@ -2,7 +2,7 @@
  * @fileoverview AlertsPanel rendering Gemini predictions and rerouting recommendations.
  * Integrates an interactive mock mobile phone console to dispatch SMS instructions to gate staff.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AlertTriangle, MapPin, ShieldAlert, Sparkles, Navigation, Smartphone, Send, X } from 'lucide-react';
 
 /**

@@ -3,7 +3,7 @@
  * Integrates theme modes, instant keyword search, and CSV log exporters.
  */
 import React, { useState } from 'react';
-import { Activity, Flame, ChevronRight, BarChart2, Download, Search, X } from 'lucide-react';
+import { Activity, ChevronRight, BarChart2, Download, Search, X } from 'lucide-react';
 import { api } from '../services/api.js';
 import TrendChart from './TrendChart.jsx';
 

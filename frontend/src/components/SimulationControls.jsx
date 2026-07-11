@@ -2,7 +2,7 @@
  * @fileoverview Interactive panel for switching match day scenarios, supporting themes, Operator Roles, and scenario presets.
  */
 import React from 'react';
-import { Sliders, HelpCircle, ShieldAlert } from 'lucide-react';
+import { Sliders, ShieldAlert } from 'lucide-react';
 
 const SCENARIOS = [
   { id: 'PRE_MATCH_RUSH', label: '🏟️ Pre-Match Rush', desc: 'Gates 3 & 6 spiking' },

@@ -1,8 +1,8 @@
 /**
  * @fileoverview Main React App coordinating multi-page tab portal navigation, light/dark themes, Operator Roles, audio customizers, and diagnostics.
  */
-import React, { useState, useEffect, Suspense } from 'react';
-import { Shield, Sparkles, RefreshCw, Layers, Home, Activity, MessageSquare, Sliders, Volume2, VolumeX, AlertOctagon, Sun, Moon, Users, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { Shield, Sparkles, RefreshCw, Layers, Home, Activity, MessageSquare, Sliders, Volume2, VolumeX, AlertOctagon, Sun, Moon, Users } from 'lucide-react';
 import { api } from './services/api.js';
 import SimulationControls from './components/SimulationControls.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -123,7 +123,7 @@ function App() {
    * Refreshes status and alerts data from API.
    * Runs on a 5-second polling interval.
    */
-  const fetchData = async (showRefresher = false) => {
+  const fetchData = useCallback(async (showRefresher = false) => {
     if (lockdownActive) return; // Freeze polling during lockdown mock override
     if (showRefresher) setIsRefreshing(true);
     
@@ -159,7 +159,7 @@ function App() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [lockdownActive, alarmEnabled, alarmTone, warningThreshold, prevCriticalCount]);
 
   // Configure 5-second polling interval
   useEffect(() => {
@@ -169,7 +169,7 @@ function App() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [alarmEnabled, warningThreshold, prevCriticalCount, alarmTone, lockdownActive]);
+  }, [fetchData, alarmEnabled, warningThreshold, prevCriticalCount, alarmTone, lockdownActive]);
 
   /**
    * Changes the active crowd simulation phase.
@@ -379,16 +379,19 @@ function App() {
               {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             </button>
             
+            {/* Sync Telemetry Button */}
             <button
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-center ${
+              onClick={() => fetchData(true)}
+              disabled={isRefreshing}
+              className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center justify-center gap-1.5 text-xs font-bold ${
                 isDark 
                   ? 'bg-stadium-slate-900 border-stadium-slate-800 text-slate-400 hover:text-white' 
                   : 'bg-slate-100 border-slate-250 text-slate-650 hover:text-slate-900 shadow-sm'
               }`}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title="Sync live crowd telemetry"
             >
-              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isRefreshing ? 'Syncing...' : 'Sync'}</span>
             </button>
 
             {/* Warning Alarm Toggle */}

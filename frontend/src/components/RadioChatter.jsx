@@ -2,7 +2,7 @@
  * @fileoverview RadioChatter component displaying real-time simulated ground security updates.
  */
 import React, { useState, useEffect } from 'react';
-import { Radio, RefreshCw } from 'lucide-react';
+import { Radio } from 'lucide-react';
 
 const CHATTER_TEMPLATES = [
   { sender: "Volunteer Leo (Gate 3)", message: "Queue is building up fast here. Directing general admission tickets to lanes 12-14." },
