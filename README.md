@@ -95,6 +95,23 @@ npm run test
 
 ---
 
+## Advanced Web Service Features (Phase 2)
+
+To transform the portal into a complete, production-ready enterprise web service, the following 10 interactive features were implemented:
+
+1. **Light & Dark Theme Switcher**: Standard CSS variables are linked to a toggle in the settings and header, allowing users to switch between a sleek dark control room layout and a high-contrast daylight theme.
+2. **Emergency Lockdown (Panic Trigger)**: Added a glowing orange warning button in the navigation header that overrides all gates to 95% capacity, triggers warning chimes continuously, and posts a GenAI evac redirect plan.
+3. **Stadium PA Announcer System**: Embedded a speech synthesis announcer using the Web Speech API. Speaks preset or custom safety scripts over the PA system with pre-broadcast warning chimes.
+4. **Multi-Role Operator Switcher**: Restricts slider allocations, simulator presets, and PA broadcasts based on the chosen role (`Stadium Director`, `Safety Officer`, or `Volunteer Crew`).
+5. **Live System Health Diagnostics**: Renders dynamic telemetry stats including latency history bar charts, database socket connections, and CPU usage.
+6. **CSV Log Exporter**: Automatically parses historical gate telemetry logs and downloads them directly as a `.csv` spreadsheet file.
+7. **Simulation Scenario Presets**: Quick-loads event scenarios (*Kickoff Rush*, *Weather Evacuation*, *Concourse Spikes*) to configure the environment instantly.
+8. **Alarm Tone Customizer**: Toggle warning alarm sounds between "Radar Sonar Ping," "Digital Double Beep," and "Evacuation Siren."
+9. **Bilateral Ground Radio Chatter Feed**: Interactive, live logs feed showing reports from volunteers in the field.
+10. **Real-time Telemetry Search & Filter**: Instant input query bar on the telemetry grid to search gates by name or capacity status.
+
+---
+
 ## Walkthrough Scenarios
 
 Select these scenarios from the **Venue Simulation Controls** on the dashboard to test features:
