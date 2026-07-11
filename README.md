@@ -40,7 +40,7 @@ An operator-facing real-time venue operations dashboard designed to monitor crow
 - **Frontend**: React client scaffolded with Vite and Tailwind CSS v3. Adheres to WCAG AA guidelines with high-contrast color palettes and colorblind-safe (Blue-to-Orange) density cells. Throttles updates via a 5-second polling tick. Chat widget is lazy-loaded (`React.lazy` + `Suspense`).
 - **Backend**: Node.js Express server. Secures the Gemini API by proxying all requests. Integrates security layers: `helmet` for headers, `express-rate-limit` to prevent API exhaustion, and `express-validator` to sanitize user chat inputs.
 - **Database**: MongoDB Atlas via Mongoose. Automatically falls back to a file/in-memory simulated database if `MONGODB_URI` is omitted, allowing immediate local execution.
-- **AI Core**: Gemini 2.5 Flash. Generates plain-language alerts, specific reroute instructions, and answers queries grounded directly in live gate metrics. Gemini responses are cached in a 30-second TTL cache mapping rounded (nearest 5%) density states. It includes a **Self-Healing Model Fallback** wrapper: if `gemini-2.5-flash` returns a 404 (e.g. for newer accounts/keys), the backend dynamically falls back to `gemini-1.5-flash` and retries the request automatically to prevent service downtime.
+- **AI Core**: Gemini 2.5 Flash. Generates plain-language alerts, specific reroute instructions, and answers queries grounded directly in live gate metrics. Gemini responses are cached in a 30-second TTL cache mapping rounded (nearest 5%) density states to avoid redundant tokens consumption.
 
 ---
 
