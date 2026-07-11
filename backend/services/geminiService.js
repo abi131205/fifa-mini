@@ -9,17 +9,52 @@ import { geminiCache, generateDensityCacheKey } from '../utils/cache.js';
 const apiKey = process.env.GEMINI_API_KEY;
 let genAI = null;
 let model = null;
+let currentModelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 if (apiKey && apiKey !== 'your_gemini_api_key_here') {
   genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   model = genAI.getGenerativeModel({
-    model: modelName,
+    model: currentModelName,
     generationConfig: { responseMimeType: 'application/json' }
   });
-  console.log(`✅ Gemini Service initialized using model: ${modelName}`);
+  console.log(`✅ Gemini Service initialized using model: ${currentModelName}`);
 } else {
   console.warn('⚠️ No GEMINI_API_KEY found or using placeholder. Running Gemini service in Mock Fallback Mode.');
+}
+
+/**
+ * Safely calls generateContent, automatically retrying with a stable fallback model (gemini-1.5-flash) if 404 is returned.
+ * @param {string} prompt The text prompt to process.
+ * @param {boolean} [isJson=true] Configures response MimeType if true.
+ * @returns {Promise<string>} Response text from the model.
+ */
+async function callGeminiWithRecovery(prompt, isJson = true) {
+  if (!model) {
+    throw new Error('GenAI model not initialized');
+  }
+  
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    const isModelUnavailable = error.message.includes('404') || 
+                               error.message.includes('not found') || 
+                               error.message.includes('no longer available') ||
+                               error.message.includes('Model');
+                               
+    if (isModelUnavailable && currentModelName !== 'gemini-1.5-flash') {
+      console.warn(`⚠️ Gemini API model "${currentModelName}" failed with: ${error.message}. Initiating auto-recovery using stable fallback "gemini-1.5-flash"...`);
+      currentModelName = 'gemini-1.5-flash';
+      model = genAI.getGenerativeModel({
+        model: currentModelName,
+        generationConfig: isJson ? { responseMimeType: 'application/json' } : undefined
+      });
+      
+      const retryResult = await model.generateContent(prompt);
+      return retryResult.response.text();
+    }
+    throw error;
+  }
 }
 
 /**
@@ -86,8 +121,7 @@ export async function getPredictionForGate(gate, recentHistory, allGates) {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = await callGeminiWithRecovery(prompt, true);
     const responseData = parseGeminiJson(text);
     geminiCache.set(cacheKey, responseData);
     return responseData;
@@ -141,8 +175,7 @@ export async function getReroutingRecommendation(overloadedGates, allGates) {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = await callGeminiWithRecovery(prompt, true);
     const responseData = parseGeminiJson(text);
     geminiCache.set(cacheKey, responseData);
     return responseData;
@@ -165,11 +198,6 @@ export async function getChatResponse(userMessage, currentGates, recentAlerts) {
   if (!model) {
     return generateMockChat(userMessage, currentGates, recentAlerts);
   }
-
-  // Construct text model instance without JSON constraint for chat helper
-  const chatModel = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
-  });
 
   const gatesString = currentGates.map(g => `- ${g.name}: ${g.density}% density`).join('\n');
   const alertsString = recentAlerts.length > 0 
@@ -194,8 +222,41 @@ export async function getChatResponse(userMessage, currentGates, recentAlerts) {
   `;
 
   try {
-    const result = await chatModel.generateContent(prompt);
-    return result.response.text().trim();
+    // Construct text model instance dynamically using the resolved model name
+    const chatModel = genAI.getGenerativeModel({
+      model: currentModelName
+    });
+    
+    let text;
+    try {
+      const result = await chatModel.generateContent(prompt);
+      text = result.response.text().trim();
+    } catch (chatError) {
+      const isModelUnavailable = chatError.message.includes('404') || 
+                                 chatError.message.includes('not found') || 
+                                 chatError.message.includes('no longer available') ||
+                                 chatError.message.includes('Model');
+                                 
+      if (isModelUnavailable && currentModelName !== 'gemini-1.5-flash') {
+        console.warn(`⚠️ Chat model "${currentModelName}" failed. Auto-recovering to "gemini-1.5-flash"...`);
+        currentModelName = 'gemini-1.5-flash';
+        
+        // Synchronize primary JSON model reference as well
+        model = genAI.getGenerativeModel({
+          model: currentModelName,
+          generationConfig: { responseMimeType: 'application/json' }
+        });
+        
+        const fallbackChatModel = genAI.getGenerativeModel({
+          model: currentModelName
+        });
+        const retryResult = await fallbackChatModel.generateContent(prompt);
+        text = retryResult.response.text().trim();
+      } else {
+        throw chatError;
+      }
+    }
+    return text;
   } catch (error) {
     console.error('[Gemini API Error] Chat response failed:', error.message);
     return generateMockChat(userMessage, currentGates, recentAlerts);
