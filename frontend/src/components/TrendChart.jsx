@@ -155,6 +155,7 @@ export default function TrendChart({ history, gateName }) {
       <canvas 
         ref={canvasRef} 
         className="w-full block" 
+        role="img"
         aria-label={`Real-time capacity graph trend for ${gateName}`}
       />
     </div>

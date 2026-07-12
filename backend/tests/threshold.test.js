@@ -4,7 +4,7 @@
 import { jest } from '@jest/globals';
 
 // Set up global mock functions
-global.mockGetPrediction = jest.fn().mockImplementation((gate, recentHistory, allGates) => {
+global.mockGetPrediction = jest.fn().mockImplementation((gate, _recentHistory, _allGates) => {
   return Promise.resolve({
     gateId: gate.id,
     predictedMinutes: 8,
@@ -13,7 +13,7 @@ global.mockGetPrediction = jest.fn().mockImplementation((gate, recentHistory, al
   });
 });
 
-global.mockGetRerouting = jest.fn().mockImplementation((overloadedGates, allGates) => {
+global.mockGetRerouting = jest.fn().mockImplementation((_overloadedGates, _allGates) => {
   return Promise.resolve({
     message: 'Mock Reroute Message',
     suggestedAction: 'Mock Reroute Action'

@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', apiRouter);
 
 // Global Error Handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('[Express Error]', err.stack || err.message);
   res.status(500).json({
     success: false,

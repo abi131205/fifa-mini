@@ -31,8 +31,29 @@ async function callGeminiWithRecovery(prompt) {
   if (!model) {
     throw new Error('GenAI model not initialized');
   }
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  try {
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    const isUnavailable = error.message.includes('gemini-2.5-flash') || 
+                           error.message.includes('not available') || 
+                           error.message.includes('404');
+    if (isUnavailable) {
+      console.warn('⚠️ gemini-2.5-flash is unavailable. Falling back to gemini-1.5-flash...');
+      try {
+        const fallbackModel = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          generationConfig: { responseMimeType: 'application/json' }
+        });
+        const result = await fallbackModel.generateContent(prompt);
+        return result.response.text();
+      } catch (fallbackError) {
+        console.error('❌ Fallback model gemini-1.5-flash also failed:', fallbackError.message);
+        throw error;
+      }
+    }
+    throw error;
+  }
 }
 
 /**
@@ -206,6 +227,21 @@ export async function getChatResponse(userMessage, currentGates, recentAlerts) {
     const result = await chatModel.generateContent(prompt);
     return result.response.text().trim();
   } catch (error) {
+    const isUnavailable = error.message.includes('gemini-2.5-flash') || 
+                           error.message.includes('not available') || 
+                           error.message.includes('404');
+    if (isUnavailable) {
+      console.warn('⚠️ gemini-2.5-flash is unavailable. Falling back to gemini-1.5-flash for chat...');
+      try {
+        const fallbackModel = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash'
+        });
+        const result = await fallbackModel.generateContent(prompt);
+        return result.response.text().trim();
+      } catch (fallbackError) {
+        console.error('[Gemini API Error] Fallback chat failed:', fallbackError.message);
+      }
+    }
     console.error('[Gemini API Error] Chat response failed:', error.message);
     return generateMockChat(userMessage, currentGates, recentAlerts);
   }

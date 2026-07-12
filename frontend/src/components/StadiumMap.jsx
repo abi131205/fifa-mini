@@ -149,7 +149,7 @@ export default function StadiumMap({ gates, selectedGateId, onGateSelect }) {
                 key={gate.id}
                 role="button"
                 tabIndex={0}
-                className="cursor-pointer group"
+                className="cursor-pointer group focus:outline-none"
                 onClick={() => onGateSelect(gate)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -158,6 +158,7 @@ export default function StadiumMap({ gates, selectedGateId, onGateSelect }) {
                   }
                 }}
                 aria-label={`${gate.name}: ${gate.density}% capacity`}
+                aria-pressed={isSelected}
               >
                 {/* Ping warning rings for critical gates */}
                 {gate.density >= 80 && (
@@ -174,7 +175,7 @@ export default function StadiumMap({ gates, selectedGateId, onGateSelect }) {
                   cx={coord.x} 
                   cy={coord.y} 
                   r="19" 
-                  className={`fill-none transition-all duration-300 ${
+                  className={`fill-none transition-all duration-300 group-focus:stroke-stadium-orange-500 group-focus:stroke-2 ${
                     isSelected ? 'stroke-stadium-orange-500 stroke-2' : 'stroke-transparent group-hover:stroke-stadium-slate-700'
                   }`}
                 />

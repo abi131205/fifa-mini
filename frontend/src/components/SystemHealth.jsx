@@ -77,7 +77,11 @@ export default function SystemHealth({ theme }) {
           <span className="font-bold">Uplink Telemetry History Feed</span>
           <span className="font-mono">Syncing...</span>
         </div>
-        <div className={`h-12 w-full rounded flex items-end gap-1.5 p-2 ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}>
+        <div 
+          className={`h-12 w-full rounded flex items-end gap-1.5 p-2 ${isDark ? 'bg-slate-950' : 'bg-slate-100'}`}
+          role="group" 
+          aria-label="Uplink latency history chart"
+        >
           {latencyHistory.map((val, idx) => {
             // Scale bar height to fit the 120ms max latency
             const heightPct = Math.min(100, Math.max(10, (val / 120) * 100));
@@ -86,6 +90,8 @@ export default function SystemHealth({ theme }) {
                 key={idx}
                 className="flex-grow bg-stadium-orange-500 rounded-t transition-all duration-300"
                 style={{ height: `${heightPct}%` }}
+                role="img"
+                aria-label={`Latency reading ${idx + 1}: ${val} ms`}
                 title={`${val} ms`}
               />
             );

@@ -74,6 +74,7 @@ class MockQuery {
     return Promise.resolve(this.data);
   }
 
+  /* eslint-disable-next-line unicorn/no-thenable */
   then(onResolve, onReject) {
     return Promise.resolve(this.data).then(onResolve, onReject);
   }

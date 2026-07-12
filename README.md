@@ -82,16 +82,18 @@ npm run test
 
 ---
 
-## Problem Statement Alignment
+## Problem Statement Alignment: [Challenge 4] Smart Stadiums & Tournament Operations
 
-| Problem Statement Requirement | Feature Implemented | Technical Detail / Security & Accessibility |
+Our solution is engineered specifically to satisfy the core tracks of **Challenge 4**:
+
+| Challenge 4 Track | Feature Implemented | Technical Detail / Security & Accessibility |
 | :--- | :--- | :--- |
-| **Live Density Dashboard** | Heatmap Grid of 8 gates showing fluctuating crowd metrics. | Colorblind-safe palette (Blue-to-Orange scale) + numerical percentage labels + tab-navigable focus styles. |
-| **GenAI Predictive Alerts** | Alerts cards warning operators about congestion trends. | Calls Gemini 2.5 Flash backend proxy; uses a 30-second TTL cache for identical crowd states. |
-| **GenAI Rerouting Suggestions** | Actionable redirects suggesting alternate entrances when gates cross 80%. | Triggered automatically on density ticks; suggestions are logged in the database and announced via `aria-live="polite"`. |
-| **Staff Chat Assistant** | Grounded chatbot answering volunteer queries. | Sanity checking strips HTML script tags and filters out prompt injection keywords; lazy-loaded for loading efficiency. |
-| **Security Parameters** | Express security hardening. | Integrates `helmet`, CORS filters, `express-rate-limit` per route, and loads credentials securely via `.env`. |
-| **Testing Parameters** | Jest unit and integration suite. | Mocks external Gemini payloads and MongoDB connection fallbacks, verifying 17 normal, boundary, and edge cases (including threshold crossings, status transitions, and prediction logic). |
+| **Dynamic Crowd Management** | Live Heatmap Grid & Volunteer Staff Dispatch loop | Colorblind-safe (Blue-to-Orange HSL) scale nodes. Dispatching volunteers dynamically dampens simulation flow rates on subsequent tick calculations. |
+| **Smart Indoor Navigation** | Interactive 2D SVG Stadium Map Visualizer | Displays layout coordinates and live capacity glows. Interactive gate nodes support keyboard tab outlines and `aria-pressed` states to direct fans safely. |
+| **Real-Time Decision Support** | GenAI Predictive Warnings, SMS Cellular Console & PA Broadcaster | Automatically triggers Gemini 2.5 Flash predictions at 80% boundary. Includes SMS mock smartphone dispatch controls and Web Speech API announcers. |
+| **Multilingual AI Assistance** | Grounded Staff Chat Assistant | Voluneteer helper chatbot utilizing Gemini grounded in live gate telemetry, sanitizing prompt overrides, and returning multi-language help. |
+| **Security Parameters** | Monorepo Security Guardrails | Express server implements `helmet` header security, `express-rate-limit` per endpoint, and `express-validator` to prevent XSS. |
+| **Testing Parameters** | Jest Unit & Integration Test Suites | Verifies 22 test cases across 4 test files (`threshold`, `api`, `sanitization`, `cache`), with mocks for MongoDB and Gemini API. |
 
 ---
 
